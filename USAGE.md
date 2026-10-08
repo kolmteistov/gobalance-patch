@@ -1,4 +1,4 @@
-# usage.md — Building and Testing the GoBalance Patch & PoC
+# Building and Testing the GoBalance Patch & PoC
 
 This guide walks through applying the patch, building the code, and running
 the proof-of-concept to verify (a) the attack works against the vulnerable
