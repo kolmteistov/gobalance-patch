@@ -229,8 +229,6 @@ grep -n "expectedBlindedKeys" pkg/onionbalance/instance/instance.go
 - Every key in this package is generated locally at test time; the PoC never
   contacts HSDirs, directories, or any real onion service.
 - Only run these tests against code and keys you own.
-- Please share the patch, not the weapon: public discussion should focus on
-  the fix and operator guidance (see `COMMUNITY_POST.md`).
 
 ## 12. Post-fix operational checklist (operators)
 
