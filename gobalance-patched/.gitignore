@@ -1,0 +1,5 @@
+vendor
+.idea
+*.key
+*.toml
+*.yaml
