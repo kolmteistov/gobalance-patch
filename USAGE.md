@@ -20,7 +20,7 @@ access to any real service are involved.**
 ## 2. Package layout
 
 ```
-gobalance-patch-poc/
+gobalance-patch/
 ├── gobalance-security.patch   unified diff against upstream master@bb1b0f3
 └── gobalance-patched/         complete pre-patched source tree
     ├── main.go, go.mod, go.sum
@@ -47,7 +47,7 @@ dry run fails, fall back to Option B or retry with `git apply --3way`.
 ### Option B — use the bundled pre-patched tree (recommended)
 
 ```bash
-cd /path/to/gobalance-patch-poc/gobalance-patched
+cd /path/to/gobalance-patch/gobalance-patched
 ```
 
 No patching needed; this tree already contains every fix described in
