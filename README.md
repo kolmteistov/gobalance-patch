@@ -63,7 +63,7 @@ consensus it refuses to register rather than trust blindly.
 ```
 gobalance-patch/
 ├── README.md                  ← this file (English)
-├── usage.md                   ← step-by-step build & test guide (English)
+├── USAGE.md                   ← step-by-step build & test guide (English)
 ├── README_ID.md               ← ringkasan patch (Bahasa Indonesia)
 ├── gobalance-security.patch   ← unified diff against master@bb1b0f3 (7 files, +360/−94)
 └── gobalance-patched/         ← full pre-patched source tree (drop-in)
