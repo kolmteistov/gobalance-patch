@@ -1,4 +1,4 @@
-# PATCH & POC KEAMANAN — gobalance
+# PATCH & POC KEAMANAN - gobalance
 
 Paket ini berisi patch keamanan lengkap + proof-of-concept untuk repositori
 `gitlab.com/n0tr1v/gobalance` (branch `master`, commit `bb1b0f3`),
@@ -18,7 +18,7 @@ onion.
 
 **Kerentanan #1 (jalur kunci format Tor).**
 Dispatcher `blindedSign()` di `pkg/stem/descriptor/hidden_service.go`
-mengirim `identityKey.Seed()` — hanya 32 byte skalar `a` — ke
+mengirim `identityKey.Seed()` - hanya 32 byte skalar `a` - ke
 `BlindedSignWithTorKey()`, padahal kunci format Tor adalah *extended key*
 64 byte `(a || h)`; `h` adalah kunci PRF untuk menurunkan prefix nonce
 signature. Akibatnya `esk[32:]` kosong dan
@@ -29,7 +29,7 @@ kPrime = SHA512("Derive temporary signing key hash input" + <kosong>)
 
 menjadi **konstanta publik**. Siapa pun yang melihat SATU descriptor publik
 dapat menghitung ulang nonce `r`, menyelesaikan
-`s' = (S − r) · H(R‖PK‖M)⁻¹ mod L`, lalu unblind dengan multiplier publik —
+`s' = (S − r) · H(R‖PK‖M)⁻¹ mod L`, lalu unblind dengan multiplier publik -
 memulihkan skalar kunci master `(mod L)` yang ekuivalen penuh dengan kunci
 identitas onion. Perbaikan: dispatcher meneruskan kunci utuh
 (`gobpk.PrivateKey.PrivKey()`), `BlindedSignWithTorKey` menolak (panic) kunci
@@ -42,32 +42,40 @@ diterima dari jaringan. Karena subcredential dihitung dari (kunci publik
 identitas, kunci blinded **yang dibawa descriptor itu sendiri**), penyerang
 dapat mencetak descriptor yang konsisten secara kriptografis untuk alamat
 onion orang lain memakai kunci pilihannya sendiri. Frontend kemudian
-menerbitkan ulang titik introduksi penyerang di bawah identitas korban —
+menerbitkan ulang titik introduksi penyerang di bawah identitas korban -
 pembajakan trafik total tanpa perlu memulihkan kunci apa pun. Perbaikan:
-verifikasi tiga lapis di `VerifyHiddenServiceDescriptorV3()` — (1) signature
+verifikasi tiga lapis di `VerifyHiddenServiceDescriptorV3()` - (1) signature
 sertifikat di bawah kunci blinded, (2) signature descriptor di bawah kunci
 penandatangan tersertifikasi, (3) **binding**: kunci blinded harus sama
 dengan yang dihitung frontend dari konsensus (`GetBlindingParam` + periode
-waktu) dan alamat instance — dihitung independen dari isi descriptor.
+waktu) dan alamat instance - dihitung independen dari isi descriptor.
 
 ## 2. Berkas yang diubah / ditambah
 
 Patch inti (7 berkas):
-- `pkg/gobpk/gobpk.go` — aksesor `PrivKey()`, invarian panjang kunci Tor di `New()`.
-- `pkg/stem/util/ed25519.go` — perbaikan `BlindedSignWithTorKey`, guard seed di `BlindedSign`, guard 64-byte di `blindedSignP2`.
-- `pkg/stem/descriptor/hidden_service.go` — dispatcher `blindedSign`, `IdentityKeyFromAddress`, verifikator `VerifyHiddenServiceDescriptorV3`.
-- `pkg/onionbalance/descriptor/descriptor.go` — verifikasi di `NewReceivedDescriptor`, shuffle CSPRNG.
-- `pkg/onionbalance/instance/instance.go` — `RegisterDescriptor(..., expectedBlindedKeys...)`.
-- `pkg/onionbalance/onionbalance/onionbalance.go` — derivasi ekspektasi blinded key dari konsensus sebelum registrasi descriptor.
-- `pkg/brand/brand.go` — seluruh jalur deterministik dihapus; hanya `crypto/rand`.
+- `pkg/gobpk/gobpk.go` - aksesor `PrivKey()`, invarian panjang kunci Tor di `New()`.
+- `pkg/stem/util/ed25519.go` - perbaikan `BlindedSignWithTorKey`, guard seed di `BlindedSign`, guard 64-byte di `blindedSignP2`.
+- `pkg/stem/descriptor/hidden_service.go` - dispatcher `blindedSign`, `IdentityKeyFromAddress`, verifikator `VerifyHiddenServiceDescriptorV3`.
+- `pkg/onionbalance/descriptor/descriptor.go` - verifikasi di `NewReceivedDescriptor`, shuffle CSPRNG.
+- `pkg/onionbalance/instance/instance.go` - `RegisterDescriptor(..., expectedBlindedKeys...)`.
+- `pkg/onionbalance/onionbalance/onionbalance.go` - derivasi ekspektasi blinded key dari konsensus sebelum registrasi descriptor.
+- `pkg/brand/brand.go` - seluruh jalur deterministik dihapus; hanya `crypto/rand`.
 
 PoC (6 berkas, tidak terhubung ke biner produksi):
-- `poc/attack_demo_test.go` — demo serangan end-to-end + pembuktian pertahanan.
-- `poc/vulnerable/ed25519_vulnerable.go` — snapshot kode RENTAN dari git history (untuk demo).
-- `poc/vulnerable/attack_helpers.go` — helper sisi penyerang untuk demo.
-- `pkg/stem/util/attack_poc_test.go` — regresi pertahanan (serangan harus gagal).
-- `pkg/stem/descriptor/forged_descriptor_poc_test.go` — descriptor palsu konsisten-diri terdeteksi.
-- `pkg/onionbalance/descriptor/verification_poc_test.go` — jalur intake nyata menerima yang jujur, menolak yang dipalsukan.
+- `poc/attack_demo_test.go` - demo serangan end-to-end + pembuktian pertahanan.
+- `poc/vulnerable/ed25519_vulnerable.go` - snapshot kode RENTAN dari git history (untuk demo).
+- `poc/vulnerable/attack_helpers.go` - helper sisi penyerang untuk demo.
+- `pkg/stem/util/attack_poc_test.go` - regresi pertahanan (serangan harus gagal).
+- `pkg/stem/descriptor/forged_descriptor_poc_test.go` - descriptor palsu konsisten-diri terdeteksi.
+- `pkg/onionbalance/descriptor/verification_poc_test.go` - jalur intake nyata menerima yang jujur, menolak yang dipalsukan.
+
+Demo CLI & perkakas (di dalam `gobalance-patched/`):
+- `cmd/gbdemo/` - CLI demo pemulihan kunci master (`simulate`/`attack`/`forge`) + 3 test E2E; panduan demo live terhadap layanan sendiri ada di USAGE.md #13.
+- `tools/pem2tor.py` - konversi kunci master PEM/PKCS8 → format Tor **tanpa mengubah alamat onion** (menentukan jalur signing rentan vs aman).
+- `tools/get_desc.py` - ambil descriptor v3 via control port Tor (persis langkah yang dilakukan penyerang; data publik).
+
+Fork komunitas:
+- `gobalance-v1/` - fork "GoBalance Enhanced v1.0" sebagaimana beredar di Dread, disertakan apa adanya untuk pengujian komunitas. **Masih RENTAN** - flaw #1 ada di `pkg/stem/descriptor/hidden_service.go:128` (`identityKey.Seed()`, 32 byte), prasyaratnya sama: kunci master format Tor. Lihat USAGE.md #14.
 
 ## 3. Cara menerapkan patch
 
@@ -112,12 +120,12 @@ TestForgedSelfConsistentDescriptorIsDetected
    bisa menarik kembali descriptor yang sudah terbit. Buat identitas onion
    baru dan migrasikan.
 2. **Kompatibilitas.** Signature yang dihasilkan jalur Tor tetap merupakan
-   ed25519 standar di bawah kunci blinded — kompatibel dengan Tor dan
+   ed25519 standar di bawah kunci blinded - kompatibel dengan Tor dan
    dengan verifikasi normal; tidak ada perubahan format descriptor.
    Sementara itu, kunci format seed/PEM tidak berubah perilakunya.
 3. **Fail-closed.** Tanpa konsensus hidup, frontend sekarang menolak
    mendaftarkan descriptor instance (bukan memercayainya buta).
-4. **Branch `patch1` upstream tidak menutup kerentanan #1 maupun #2** —
+4. **Branch `patch1` upstream tidak menutup kerentanan #1 maupun #2** -
    patch ini harus diterapkan terpisah.
 5. `TestBlindedSign` asli tetap lolos: jalur seed memang benar sejak awal;
    guard baru hanya menolak pemakaian yang salah.
